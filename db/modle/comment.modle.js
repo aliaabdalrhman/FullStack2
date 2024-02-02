@@ -13,7 +13,7 @@ const commentSchema = new mongoose.Schema({
     },
     user_name: {
         type: String,
-        required: [true, "Uer email is required"],
+        // required: [true, "Uer email is required"],
     },
     content: {
         type: String,

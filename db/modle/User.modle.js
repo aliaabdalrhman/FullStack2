@@ -53,6 +53,8 @@ const userSchema = new Schema(
 
     image: {
       type: Object,
+      default: null,
+
     },
   },
   {

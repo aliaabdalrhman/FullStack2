@@ -2,6 +2,11 @@ import slugify from "slugify";
 import cloudinary from "../../services/cloudinary.js";
 import community from "../../../db/modle/community.modle.js";
 import communityproperties from "../../../db/modle/communityProperties.modle.js";
+import postModel from "../../../db/modle/post.modle.js";
+import commentModel from "../../../db/modle/comment.modle.js";
+import adminModel from "../../../db/modle/admin.modle.js";
+import logModel from "../../../db/log.js";
+import Community from "../../../db/modle/community.modle.js";
 export const viewCommunities = async (req, res) => {
   community
     .find({}, { community_name: 1, description: 1, _id: 0 })
@@ -12,15 +17,38 @@ export const viewCommunities = async (req, res) => {
       res.send("something error");
     });
 };
+// export const getCommunities = async (req, res) => {
+//   try {
+//     const communities = await community.find(); //.select('community_name'); اختار ايش اعرض
+//     return res.status(200).json({ message: "success", communities });
+//   } catch (error) {
+//     return res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
 export const getCommunities = async (req, res) => {
   try {
+    //test role
+    const user = req.params.id;
+    const find = await logModel.findOne({ email: user });
+    if (!find) {
+      return res.status(404).json({ msg: "this user doesn't exists " });
+    }
+    if (find.role === "SubAdmin") {
+      console.log(find);
+      const community = await adminModel.findOne({ email: find.email }, {}); //.select('community_name'); اختار ايش اعرض
+      console.log(community);
+      let communities = []
+      let communities1 = await Community.findOne({ community_name: community.community_id }, {});
+      communities.push(communities1);
+      console.log(communities);
+      return res.status(200).json({ message: "success", communities });
+    }
     const communities = await community.find(); //.select('community_name'); اختار ايش اعرض
     return res.status(200).json({ message: "success", communities });
   } catch (error) {
     return res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 export const getSpecificCommunity = async (req, res) => {
   const { id } = req.params;
   const Community = await community.findById(id);
@@ -41,12 +69,12 @@ export const createCommunity = async (req, res) => {
         .json({ message: "Please provide community_name and description" });
     }
     const lowerCaseCommunityName = community_name.toLowerCase();
-console.log(lowerCaseCommunityName);
+    console.log(lowerCaseCommunityName);
     // التحقق من عدم وجود اسم المجتمع في قاعدة البيانات
     const existingCommunity = await community.findOne({
       community_name: { $regex: new RegExp(`^${community_name}$`, 'i') }
     });
-    
+
     if (existingCommunity) {
       return res.status(409).json({ message: "Community name already exists" });
     }
@@ -233,7 +261,7 @@ export const cancleCreation = async (req, res) => {
   const { communityName } = req.body;
   communityproperties
     .deleteMany({ community_Name: communityName })
-    .then((result) => {})
+    .then((result) => { })
     .catch((err) => {
       console.error(err);
       return res.json("something error here!");
@@ -287,41 +315,61 @@ export const deleteCommunity = async (req, res) => {
   try {
     const community_name = req.params.community_name;
 
-    console.log('Deleting community:', community_name);
+    console.log("Deleting community:", community_name);
 
     // Find the community by name
     const foundCommunity = await community.findOne({ community_name });
 
-    console.log('Found community:', foundCommunity);
+    console.log("Found community:", foundCommunity);
 
     if (!foundCommunity) {
-      console.log('Community not found');
-      return res.status(404).json({ message: 'Community not found' });
+      console.log("Community not found");
+      return res.status(404).json({ message: "Community not found" });
     }
 
     // Delete the community image from Cloudinary
     await cloudinary.uploader.destroy(foundCommunity.image.public_id);
 
-    console.log('Community image deleted from Cloudinary');
-
+    console.log("Community image deleted from Cloudinary");
+    const posts = await postModel.find({ community_name: community_name });
+    for (let i of posts) {
+      //delete comments
+      const deleteComments = await commentModel.deleteMany({ post_id: i._id });
+    }
+    // delete posts
+    const deletePosts = await postModel.deleteMany({ community_name });
+    // delete propreties
+    const deletePropreties = await communityproperties.deleteMany({
+      community_Name: community_name,
+    });
+    const admins = await adminModel.find({ community_id: community_name });
+    for (let i of admins) {
+      const updateStatUs = await logModel.findOneAndUpdate(
+        { email: i.email, role: "SubAdmin" },
+        { state_us: false }
+      );
+    }
     // Delete the community from the database
     const deletionResult = await community.deleteOne({ community_name });
-
-    console.log('Deletion result:', deletionResult);
+    console.log("Deletion result:", deletionResult);
 
     if (deletionResult.deletedCount === 0) {
-      console.log('Community not deleted from the database');
-      return res.status(404).json({ message: 'Community not deleted from the database' });
+      console.log("Community not deleted from the database");
+      return res
+        .status(404)
+        .json({ message: "Community not deleted from the database" });
     }
 
-    console.log('Community deleted successfully');
+    console.log("Community deleted successfully");
 
-    return res.status(200).json({ message: 'Community deleted successfully' });
+    return res.status(200).json({ message: "Community deleted successfully" });
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error:", error);
 
     // Add a return statement here with an error response
-    return res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    return res
+      .status(500)
+      .json({ message: "Internal Server Error", error: error.message });
   }
 };
 

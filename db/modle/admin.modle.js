@@ -8,7 +8,7 @@ const adminSchema = new mongoose.Schema({
     max: 50,
     match: [/^[A-Za-z]+$/, "First name should contain only letters"],
   },
-  
+
   last_name: {
     type: String,
     required: [true, "Last name is required"],
@@ -58,8 +58,9 @@ const adminSchema = new mongoose.Schema({
   },
   image: {
     type: Object,
+    default: null,
+
   },
 });
-
 const adminModel = mongoose.models.Admin || model("Admin", adminSchema);
 export default adminModel;

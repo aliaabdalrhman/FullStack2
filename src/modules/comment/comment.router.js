@@ -6,7 +6,11 @@ router.post(
   "/:community/:post/:id/createComment",
   postcontroller.createComment
 );
-// router.get("/:community/:post/viewComment", postcontroller.viewComment);
+router.delete(
+  "/:community/:post/:id/deleteCommentAdmin/:commentId",
+  postcontroller.deleteCommentAdmin
+);
+router.get("/:community/:post/viewComment", postcontroller.viewComment);
 // router.delete(
 //   "/:community/:post/:id/deleteComment/:commentId",
 //   postcontroller.deleteComment

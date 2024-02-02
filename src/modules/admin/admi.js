@@ -132,27 +132,27 @@ export const enableAccount = async (req, res) => {
   }
 };
 export const recoverPassword = async (req, res) => {
-  const { email, password } = req.body;   
-   const hashedPassword = await bcrypt.hash(
-      password,
-      parseInt(process.env.SALT_ROUND)
-    );
+  const { email, password } = req.body;
+  const hashedPassword = await bcrypt.hash(
+    password,
+    parseInt(process.env.SALT_ROUND)
+  );
   if (email != undefined) {
-      log.findOne({ email: email })
+    log.findOne({ email: email })
+      .then(() => {
+        log.updateOne({ email: email }, { password: hashedPassword })
           .then(() => {
-              log.updateOne({ email: email }, { password: hashedPassword })
-                  .then(() => {
-                      return res.status(200).send({ msg: "password is updated" });
-                  })
-                  .catch(() => {
-                      return res.status(304).send({ msg: "cannot update password" });
-                  });
+            return res.status(200).send({ msg: "password is updated" });
           })
           .catch(() => {
-              return res.status(500).send({ msg: "cannot find this account" });
+            return res.status(304).send({ msg: "cannot update password" });
           });
+      })
+      .catch(() => {
+        return res.status(500).send({ msg: "cannot find this account" });
+      });
   } else {
-      return res.status(404).send({ msg: "this account is invalid" });
+    return res.status(404).send({ msg: "this account is invalid" });
   }
 };
 export const viewAdmins = async (req, res) => {
